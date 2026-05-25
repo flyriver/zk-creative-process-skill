@@ -13,7 +13,7 @@ Windows / Codex:
   -ProductBriefPath ".\my-product-brief.md"
 ```
 
-macOS / Codex or Cursor:
+macOS / Codex, Cursor, or WorkBuddy:
 
 ```bash
 ./scripts/process-reference-videos-mix.sh \
@@ -24,15 +24,21 @@ macOS / Codex or Cursor:
   --product-brief "./my-product-brief.md"
 ```
 
-The product brief is optional on both platforms. If omitted, fill the generated `product-brief-产品信息.md` before asking Codex or Cursor to map the shared direction into your own product.
+The product brief is optional on both platforms. If omitted, fill the generated `product-brief-产品信息.md` before asking Codex, Cursor, or WorkBuddy to map the shared direction into your own product.
 
-Then ask Codex:
+Then ask Codex or Cursor:
 
 ```text
 $zk-creative-process mix .\creative-materials\2026-05-23-animal-hooks-动物钩子
 ```
 
 On macOS, the same prompt works with a POSIX path:
+
+```text
+$zk-creative-process mix ./creative-materials/2026-05-23-animal-hooks-动物钩子
+```
+
+In WorkBuddy, use the same skill name:
 
 ```text
 $zk-creative-process mix ./creative-materials/2026-05-23-animal-hooks-动物钩子

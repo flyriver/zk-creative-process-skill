@@ -11,7 +11,7 @@ Windows / Codex:
   -ProductBriefPath ".\my-product-brief.md"
 ```
 
-macOS / Codex or Cursor:
+macOS / Codex, Cursor, or WorkBuddy:
 
 ```bash
 ./scripts/process-reference-video-phase1.sh \
@@ -22,15 +22,21 @@ macOS / Codex or Cursor:
   --product-brief "./my-product-brief.md"
 ```
 
-The product brief is optional on both platforms. If omitted, fill the generated `product-brief-产品信息.md` before asking Codex or Cursor for product-specific script directions.
+The product brief is optional on both platforms. If omitted, fill the generated `product-brief-产品信息.md` before asking Codex, Cursor, or WorkBuddy for product-specific script directions.
 
-Then ask Codex:
+Then ask Codex or Cursor:
 
 ```text
 $zk-creative-process single .\creative-materials\2026-05-23-dragon-flight-飞龙换场景
 ```
 
 On macOS, the same prompt works with a POSIX path:
+
+```text
+$zk-creative-process single ./creative-materials/2026-05-23-dragon-flight-飞龙换场景
+```
+
+In WorkBuddy, use the same skill name:
 
 ```text
 $zk-creative-process single ./creative-materials/2026-05-23-dragon-flight-飞龙换场景

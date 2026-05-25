@@ -1,6 +1,6 @@
 # ZK Creative Process
 
-A Codex and Cursor skill toolkit for processing game-ad reference videos into clean creative-analysis folders.
+A Codex, Cursor, and WorkBuddy skill toolkit for processing game-ad reference videos into clean creative-analysis folders.
 
 Core workflow:
 
@@ -26,7 +26,7 @@ creative-materials/YYYY-MM-DD-slug-name/
     video_metadata.json
 ```
 
-`product-brief-产品信息.md` is the bridge from reference analysis to your own product. If it is empty, Codex or Cursor should not invent product facts; mapping stays pending.
+`product-brief-产品信息.md` is the bridge from reference analysis to your own product. If it is empty, Codex, Cursor, or WorkBuddy should not invent product facts; mapping stays pending.
 
 ## Support Matrix
 
@@ -35,6 +35,7 @@ creative-materials/YYYY-MM-DD-slug-name/
 | Windows | Codex | `powershell -File .\scripts\install-skill.ps1` | PowerShell scripts |
 | macOS | Codex | `bash scripts/install-skill.sh --agent codex` | bash scripts |
 | macOS | Cursor | `bash scripts/install-skill.sh --agent cursor` | bash scripts |
+| macOS | WorkBuddy | `bash scripts/install-skill.sh --agent workbuddy` | bash scripts |
 
 ## Install
 
@@ -55,13 +56,14 @@ If the skill already exists, the installer stops. Choose explicitly:
 
 `-Backup` keeps the old installed skill. `-Force` replaces it.
 
-### macOS / Codex and Cursor
+### macOS / Codex, Cursor, and WorkBuddy
 
 Run from this repository root:
 
 ```bash
 bash scripts/install-skill.sh --agent codex
 bash scripts/install-skill.sh --agent cursor
+bash scripts/install-skill.sh --agent workbuddy
 ```
 
 `--agent` is required so the installer can choose the correct skill package and install path.
@@ -73,6 +75,8 @@ bash scripts/install-skill.sh --agent codex --backup
 bash scripts/install-skill.sh --agent codex --force
 bash scripts/install-skill.sh --agent cursor --backup
 bash scripts/install-skill.sh --agent cursor --force
+bash scripts/install-skill.sh --agent workbuddy --backup
+bash scripts/install-skill.sh --agent workbuddy --force
 ```
 
 To install as a project-scoped Cursor skill:
@@ -83,12 +87,24 @@ bash scripts/install-skill.sh --agent cursor --project
 
 `--project` is only supported with `--agent cursor`.
 
-## Use In Codex
+Default macOS install roots:
+
+- Codex: `~/.codex/skills/zk-creative-process/`
+- Cursor: `~/.cursor/skills/zk-creative-process/`
+- WorkBuddy: `~/.workbuddy/skills/zk-creative-process/`
+
+## Use In Supported Agents
 
 Single reference video:
 
 ```text
 用 $zk-creative-process single 处理这个视频：C:\path\to\video.mp4
+```
+
+In WorkBuddy, use the same skill name:
+
+```text
+用 $zk-creative-process single 处理这个视频：/path/to/video.mp4
 ```
 
 Same-direction batch:
@@ -97,12 +113,18 @@ Same-direction batch:
 用 $zk-creative-process mix 把这几个同方向视频合并分析：C:\path\to\video-1.mp4, C:\path\to\video-2.mp4
 ```
 
+In WorkBuddy, use the same skill name:
+
+```text
+用 $zk-creative-process mix 把这几个同方向视频合并分析：/path/to/video-1.mp4, /path/to/video-2.mp4
+```
+
 The scripts copy source videos by default. Originals stay where they are. Use `-Move` only when you deliberately want originals moved into the material folder.
 
 On macOS, use the bash runtime from the installed skill or the repository root. For example:
 
 ```bash
-bash ~/.codex/skills/zk-creative-process/scripts/process-reference-video-phase1.sh \
+bash ./scripts/process-reference-video-phase1.sh \
   --video "/path/to/reference.mp4" \
   --slug "short-slug" \
   --name "English-Name-中文说明" \

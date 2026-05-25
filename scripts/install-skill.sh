@@ -15,12 +15,12 @@ SHELL_RUNTIME=(
 
 usage() {
     cat <<'USAGE'
-Usage: install-skill.sh --agent codex|cursor [--force|--backup] [--skills-dir DIR] [--project]
+Usage: install-skill.sh --agent codex|cursor|workbuddy [--force|--backup] [--skills-dir DIR] [--project]
 
-Install the zk-creative-process skill for Codex or Cursor.
+Install the zk-creative-process skill for Codex, Cursor, or WorkBuddy.
 
 Options:
-  --agent NAME      Target agent: codex or cursor (required)
+    --agent NAME      Target agent: codex, cursor, or workbuddy (required)
   --skills-dir DIR  Skills directory override
   --project         Install into ./.cursor/skills/ in the current directory
                     (Cursor only; overrides --skills-dir)
@@ -31,6 +31,7 @@ Options:
 Environment:
   CODEX_SKILLS_DIR   Default skills dir when --agent codex
   CURSOR_SKILLS_DIR  Default skills dir when --agent cursor
+    WORKBUDDY_SKILLS_DIR  Default skills dir when --agent workbuddy
 USAGE
 }
 
@@ -116,9 +117,18 @@ case "$AGENT" in
         fi
         AGENT_LABEL="Cursor"
         ;;
+    workbuddy)
+        if $PROJECT_INSTALL; then
+            echo "ERROR: --project is only supported with --agent cursor." >&2
+            exit 1
+        fi
+        SOURCE_SKILL="${REPO_ROOT}/skills/${SKILL_NAME}-workbuddy"
+        SKILLS_DIR="${SKILLS_DIR:-${WORKBUDDY_SKILLS_DIR:-$HOME/.workbuddy/skills}}"
+        AGENT_LABEL="WorkBuddy"
+        ;;
     *)
         echo "ERROR: Unsupported agent: $AGENT" >&2
-        echo "Use --agent codex or --agent cursor." >&2
+        echo "Use --agent codex, --agent cursor, or --agent workbuddy." >&2
         exit 1
         ;;
 esac
