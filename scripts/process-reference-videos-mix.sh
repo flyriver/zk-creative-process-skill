@@ -12,6 +12,15 @@ log() { echo "[$(date '+%H:%M:%S')] $*" >&2; }
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+assert_safe_filename_part() {
+    local value="$1"
+    local field_name="$2"
+    [[ -n "$value" ]] || die "${field_name} cannot be empty"
+    if [[ "$value" =~ [\\/:*?\<\>\|\"] ]]; then
+        die "${field_name} contains invalid filename characters: $value"
+    fi
+}
+
 # -- argument parsing ------------------------------------------------------
 
 VIDEO_PATHS=()
@@ -70,6 +79,11 @@ done
 [[ -n "$SLUG" ]] || die "--slug is required"
 [[ -n "$NAME" ]] || die "--name is required"
 
+if ! [[ "$SLUG" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+    die "Slug must be lowercase alphanumeric with hyphens only: $SLUG"
+fi
+assert_safe_filename_part "$NAME" "Name"
+
 if [[ "$STORYBOARD_FRAMES" -lt 4 || "$STORYBOARD_FRAMES" -gt 30 ]]; then
     die "StoryboardFrames must be between 4 and 30"
 fi
@@ -109,7 +123,8 @@ NOW_ISO=$(date -u +%Y-%m-%dT%H:%M:%S)
 # -- product brief ---------------------------------------------------------
 
 PRODUCT_BRIEF_OUT="${MATERIAL_DIR}/product-brief-产品信息.md"
-if [[ -n "$PRODUCT_BRIEF_PATH" && -f "$PRODUCT_BRIEF_PATH" ]]; then
+if [[ -n "$PRODUCT_BRIEF_PATH" ]]; then
+    [[ -f "$PRODUCT_BRIEF_PATH" ]] || die "Product brief not found: $PRODUCT_BRIEF_PATH"
     cp "$PRODUCT_BRIEF_PATH" "$PRODUCT_BRIEF_OUT"
 else
     cat > "$PRODUCT_BRIEF_OUT" << 'PRODUCTBRIEF'
@@ -201,7 +216,22 @@ print(round(dur,3))
         METADATA_ITEMS+=","
         FRAME_ITEMS+=","
     fi
-    METADATA_ITEMS+="{\"index\":$VIDEO_INDEX,\"file\":\"$DEST_NAME\",\"duration_seconds\":$VDURATION,\"width\":$VWIDTH,\"height\":$VHEIGHT,\"codec\":\"$VCODEC\"}"
+    METADATA_ITEM=$(python3 - "$VIDEO_INDEX" "$DEST_NAME" "$VDURATION" "$VWIDTH" "$VHEIGHT" "$VCODEC" <<'PY'
+import json
+import sys
+
+index, file_name, duration, width, height, codec = sys.argv[1:]
+print(json.dumps({
+    "index": int(index),
+    "file": file_name,
+    "duration_seconds": float(duration),
+    "width": int(width),
+    "height": int(height),
+    "codec": codec,
+}, ensure_ascii=False))
+PY
+)
+    METADATA_ITEMS+="$METADATA_ITEM"
 
     # Extract selected frames
     SELECTED_DIR="${WORK_DIR}/selected-$(printf '%02d' "$VIDEO_INDEX")"
@@ -249,7 +279,20 @@ print(round(dur,3))
         > "${WORK_DIR}/ffmpeg-sheet-video-$(printf '%02d' "$VIDEO_INDEX").log" 2>&1 \
         || die "Contact sheet failed for video $VIDEO_INDEX"
 
-    FRAME_ITEMS+="{\"video_index\":$VIDEO_INDEX,\"video_file\":\"$DEST_NAME\",\"contact_sheet\":\"$SHEET_NAME\",\"frames\":$FRAMES_ARR}"
+    FRAME_ITEM=$(python3 - "$VIDEO_INDEX" "$DEST_NAME" "$SHEET_NAME" "$FRAMES_ARR" <<'PY'
+import json
+import sys
+
+video_index, video_file, contact_sheet, frames_json = sys.argv[1:]
+print(json.dumps({
+    "video_index": int(video_index),
+    "video_file": video_file,
+    "contact_sheet": contact_sheet,
+    "frames": json.loads(frames_json),
+}, ensure_ascii=False))
+PY
+)
+    FRAME_ITEMS+="$FRAME_ITEM"
 
     log "  Contact sheet: $SHEET_NAME"
 done
@@ -259,28 +302,34 @@ FRAME_ITEMS+="]"
 
 # -- write system files ----------------------------------------------------
 
-python3 -c "
+python3 - "${SYSTEM_DIR}/video_metadata.json" "$NOW_ISO" "$METADATA_ITEMS" <<'PY'
 import json
-meta = {
-    'generated_at': '$NOW_ISO',
-    'mode': 'mix',
-    'videos': $METADATA_ITEMS
-}
-with open('${SYSTEM_DIR}/video_metadata.json', 'w') as f:
-    json.dump(meta, f, indent=2, ensure_ascii=False)
-"
+import sys
 
-python3 -c "
-import json
-fi = {
-    'generated_at': '$NOW_ISO',
-    'mode': 'mix',
-    'frame_count_per_video': $STORYBOARD_FRAMES,
-    'videos': $FRAME_ITEMS
+output_path, generated_at, metadata_items = sys.argv[1:]
+meta = {
+    "generated_at": generated_at,
+    "mode": "mix",
+    "videos": json.loads(metadata_items),
 }
-with open('${SYSTEM_DIR}/frame-index.json', 'w') as f:
+with open(output_path, "w", encoding="utf-8") as f:
+    json.dump(meta, f, indent=2, ensure_ascii=False)
+PY
+
+python3 - "${SYSTEM_DIR}/frame-index.json" "$NOW_ISO" "$STORYBOARD_FRAMES" "$FRAME_ITEMS" <<'PY'
+import json
+import sys
+
+output_path, generated_at, storyboard_frames, frame_items = sys.argv[1:]
+fi = {
+    "generated_at": generated_at,
+    "mode": "mix",
+    "frame_count_per_video": int(storyboard_frames),
+    "videos": json.loads(frame_items),
+}
+with open(output_path, "w", encoding="utf-8") as f:
     json.dump(fi, f, indent=2, ensure_ascii=False)
-"
+PY
 
 # -- skeleton markdown files -----------------------------------------------
 
@@ -290,12 +339,15 @@ cat > "$BRIEF_PATH" << BRIEF
 
 ## Source Videos
 
-$(python3 -c "
+$(python3 - "$METADATA_ITEMS" <<'PY'
 import json
-items = json.loads('''$METADATA_ITEMS''')
+import sys
+
+items = json.loads(sys.argv[1])
 for v in items:
-    print(f'- Video {v[\"index\"]}: {v[\"file\"]}, {v[\"duration_seconds\"]}s, {v[\"width\"]}x{v[\"height\"]}')
-")
+    print(f'- Video {v["index"]}: {v["file"]}, {v["duration_seconds"]}s, {v["width"]}x{v["height"]}')
+PY
+)
 
 ## Generated Assets
 
@@ -359,22 +411,25 @@ Use product-brief-产品信息.md for product mapping. If product information is
 AIPACK
 
 MANIFEST_PATH="${SYSTEM_DIR}/run-manifest.json"
-python3 -c "
+python3 - "$MANIFEST_PATH" "$NOW_ISO" "$MATERIAL_DIR" "$AI_PACK" "$BRIEF_PATH" "$PRODUCT_BRIEF_OUT" "$SHARED_PATH" "$VIDEO_INDEX" <<'PY'
 import json
+import sys
+
+output_path, generated_at, material_folder, ai_pack, brief, product_brief, shared_path, video_count = sys.argv[1:]
 m = {
-    'generated_at': '$NOW_ISO',
-    'mode': 'mix',
-    'script': 'process-reference-videos-mix.sh',
-    'material_folder': '$MATERIAL_DIR',
-    'ai_input_pack': '$AI_PACK',
-    'brief': '$BRIEF_PATH',
-    'product_brief': '$PRODUCT_BRIEF_OUT',
-    'outputs': ['$SHARED_PATH'],
-    'video_count': $VIDEO_INDEX
+    "generated_at": generated_at,
+    "mode": "mix",
+    "script": "process-reference-videos-mix.sh",
+    "material_folder": material_folder,
+    "ai_input_pack": ai_pack,
+    "brief": brief,
+    "product_brief": product_brief,
+    "outputs": [shared_path],
+    "video_count": int(video_count),
 }
-with open('$MANIFEST_PATH', 'w') as f:
+with open(output_path, "w", encoding="utf-8") as f:
     json.dump(m, f, indent=2, ensure_ascii=False)
-"
+PY
 
 # -- cleanup ---------------------------------------------------------------
 
@@ -387,16 +442,19 @@ fi
 
 log "Done. Material folder: $MATERIAL_DIR"
 
-python3 -c "
+python3 - "$MATERIAL_DIR" "$AI_PACK" "$BRIEF_PATH" "$PRODUCT_BRIEF_OUT" "$SHARED_PATH" "$MANIFEST_PATH" "$KEEP_WORK" <<'PY'
 import json
+import sys
+
+material_folder, ai_pack, brief, product_brief, shared_analysis, manifest, keep_work = sys.argv[1:]
 result = {
-    'material_folder': '$MATERIAL_DIR',
-    'ai_input_pack': '$AI_PACK',
-    'brief': '$BRIEF_PATH',
-    'product_brief': '$PRODUCT_BRIEF_OUT',
-    'shared_analysis': '$SHARED_PATH',
-    'manifest': '$MANIFEST_PATH',
-    'temp_work_dir_kept': $(if $KEEP_WORK; then echo true; else echo false; fi)
+    "material_folder": material_folder,
+    "ai_input_pack": ai_pack,
+    "brief": brief,
+    "product_brief": product_brief,
+    "shared_analysis": shared_analysis,
+    "manifest": manifest,
+    "temp_work_dir_kept": keep_work == "true",
 }
 print(json.dumps(result, indent=2, ensure_ascii=False))
-"
+PY

@@ -35,7 +35,7 @@ Code-first: scripts handle deterministic file operations, AI handles creative an
 
 ## single Workflow
 
-Run from the repo root:
+Run from the installed skill's `scripts/` directory, or from the repository root during development:
 
 ```bash
 ./scripts/process-reference-video-phase1.sh \

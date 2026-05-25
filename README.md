@@ -42,13 +42,20 @@ Then verify:
 
 ## Install the Skill
 
-Copy the macOS skill definition into your WorkBuddy skills directory:
+Run the installer from this repository root. It copies both the skill definition and the bash scripts it needs at runtime:
 
 ```bash
-cp -r skills/zk-creative-process-macos ~/.workbuddy/skills/zk-creative-process-macos/
+bash scripts/install-workbuddy-skill.sh
 ```
 
-The skill is now available in WorkBuddy. No additional configuration needed.
+If the skill already exists, choose explicitly:
+
+```bash
+bash scripts/install-workbuddy-skill.sh --backup
+bash scripts/install-workbuddy-skill.sh --force
+```
+
+The skill is now available in WorkBuddy with its bundled scripts under `~/.workbuddy/skills/zk-creative-process-macos/scripts/`.
 
 ## Usage
 
@@ -69,7 +76,7 @@ Available options:
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--product-brief` | (none) | Pre-filled product context markdown |
-| `--frames` | 96 | Max keyframes to extract |
+| `--frames` | 12 | Storyboard frames to extract for single mode |
 | `--threshold` | 0.23 | Scene-change sensitivity (lower = more frames) |
 | `--move` | off | Move source video instead of copying |
 | `--keep-work` | off | Keep intermediate extraction folder |
@@ -86,6 +93,8 @@ Multiple same-direction videos → one direction-level folder.
   --name "Shared-Direction-同方向说明" \
   --base-dir "./creative-materials"
 ```
+
+Mix mode uses `--frames 8` by default, per video.
 
 ## After the Script Runs
 
@@ -136,7 +145,7 @@ The `main` branch includes `.ps1` scripts and `skills/zk-creative-process/` for 
 ## Validate Generated Material
 
 ```bash
-./scripts/check-creative-material.sh ./creative-materials/YYYY-MM-DD-slug-name
+./scripts/check-creative-material.sh --material-dir ./creative-materials/YYYY-MM-DD-slug-name
 ```
 
 ## Privacy

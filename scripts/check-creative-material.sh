@@ -130,19 +130,21 @@ if $JSON_OUT; then
     done
     ISSUES_JSON+="]"
 
-    python3 -c "
+    python3 - "$ISSUES_JSON" "$MATERIAL_DIR" "$(date -u +%Y-%m-%dT%H:%M:%S)" "$STATUS" "$ERRORS" "$WARNINGS" <<'PY'
 import json
-issues = json.loads('''$ISSUES_JSON''')
+import sys
+
+issues_json, material_folder, checked_at, status, errors, warnings = sys.argv[1:]
 result = {
-    'material_folder': '$MATERIAL_DIR',
-    'checked_at': '$(date -u +%Y-%m-%dT%H:%M:%S)',
-    'status': '$STATUS',
-    'errors': $ERRORS,
-    'warnings': $WARNINGS,
-    'issues': issues
+    "material_folder": material_folder,
+    "checked_at": checked_at,
+    "status": status,
+    "errors": int(errors),
+    "warnings": int(warnings),
+    "issues": json.loads(issues_json),
 }
 print(json.dumps(result, indent=2, ensure_ascii=False))
-"
+PY
 else
     echo "Material check: $STATUS"
     echo "Errors: $ERRORS"

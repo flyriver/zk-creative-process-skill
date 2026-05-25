@@ -100,7 +100,10 @@ MATERIAL_DIR=$(echo "$START_JSON" | python3 -c "import json,sys; print(json.load
 
 CHECK_ARGS=(--material-dir "$MATERIAL_DIR" --json)
 $STRICT_CHECK && CHECK_ARGS+=(--strict)
-CHECK_JSON=$("${SCRIPT_DIR}/check-creative-material.sh" "${CHECK_ARGS[@]}") 2>/dev/null || true
+set +e
+CHECK_JSON=$("${SCRIPT_DIR}/check-creative-material.sh" "${CHECK_ARGS[@]}" 2>/dev/null)
+CHECK_EXIT=$?
+set -e
 
 CHECK_STATUS=$(echo "$CHECK_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null || echo "unknown")
 CHECK_ERRORS=$(echo "$CHECK_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin).get('errors',0))" 2>/dev/null || echo "0")
@@ -108,24 +111,19 @@ CHECK_WARNINGS=$(echo "$CHECK_JSON" | python3 -c "import json,sys; print(json.lo
 
 # -- output ----------------------------------------------------------------
 
-python3 -c "
+python3 - "$CHECK_STATUS" "$CHECK_ERRORS" "$CHECK_WARNINGS" "$START_JSON" <<'PY'
 import json
-r = json.loads('''$START_JSON''')
-r['check_status'] = '$CHECK_STATUS'
-r['check_errors'] = $CHECK_ERRORS
-r['check_warnings'] = $CHECK_WARNINGS
+import sys
+
+check_status, check_errors, check_warnings, start_json = sys.argv[1:]
+r = json.loads(start_json)
+r['check_status'] = check_status
+r['check_errors'] = int(check_errors)
+r['check_warnings'] = int(check_warnings)
 r['next_step'] = 'AI reads _system-review-系统复查资料/ai-input-pack.md, product-brief-产品信息.md, and the keyframe contact sheet, then replaces the output skeleton documents. If product brief is incomplete, product mapping stays pending.'
 print(json.dumps(r, indent=2, ensure_ascii=False))
-"
+PY
 
-echo ""
-echo "=== NEXT STEP ==="
-echo "Material folder: $MATERIAL_DIR"
-echo ""
-echo "AI should now:"
-echo "  1. Read _system-review-系统复查资料/ai-input-pack.md"
-echo "  2. Open the keyframe contact sheet: $(basename "$MATERIAL_DIR")/keyframes-reference-storyboard-contact-sheet-${NAME}.jpg"
-echo "  3. Read _system-review-系统复查资料/frame-index.json"
-echo "  4. Fill outputs/reference-video-storyboard-原视频场景变化分镜.md"
-echo "  5. Fill outputs/creative-script-directions-创意脚本方向.md"
-echo "  6. Fill product-brief-产品信息.md if needed"
+if [[ $CHECK_EXIT -ne 0 ]]; then
+    exit "$CHECK_EXIT"
+fi

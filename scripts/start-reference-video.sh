@@ -14,9 +14,13 @@ set -euo pipefail
 die() { echo "ERROR: $*" >&2; exit 1; }
 log() { echo "[$(date '+%H:%M:%S')] $*" >&2; }
 
-safe_fname() {
-    # Replace characters unsafe for filenames
-    echo "$1" | sed 's/[\/:*?"<>|]/-/g'
+assert_safe_filename_part() {
+    local value="$1"
+    local field_name="$2"
+    [[ -n "$value" ]] || die "${field_name} cannot be empty"
+    if [[ "$value" =~ [\\/:*?\<\>\|\"] ]]; then
+        die "${field_name} contains invalid filename characters: $value"
+    fi
 }
 
 parse_fps() {
@@ -74,6 +78,7 @@ done
 if ! [[ "$SLUG" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
     die "Slug must be lowercase alphanumeric with hyphens only: $SLUG"
 fi
+assert_safe_filename_part "$NAME" "Name"
 
 if [[ "$STORYBOARD_FRAMES" -lt 4 || "$STORYBOARD_FRAMES" -gt 30 ]]; then
     die "StoryboardFrames must be between 4 and 30"
@@ -134,7 +139,8 @@ log "Video $VIDEO_ACTION to $DEST_VIDEO"
 # -- product brief ---------------------------------------------------------
 
 PRODUCT_BRIEF_OUT="${MATERIAL_DIR}/product-brief-产品信息.md"
-if [[ -n "$PRODUCT_BRIEF_PATH" && -f "$PRODUCT_BRIEF_PATH" ]]; then
+if [[ -n "$PRODUCT_BRIEF_PATH" ]]; then
+    [[ -f "$PRODUCT_BRIEF_PATH" ]] || die "Product brief not found: $PRODUCT_BRIEF_PATH"
     cp "$PRODUCT_BRIEF_PATH" "$PRODUCT_BRIEF_OUT"
 else
     cat > "$PRODUCT_BRIEF_OUT" << 'PRODUCTBRIEF'
@@ -267,38 +273,65 @@ print(d.get('bit_rate',''))
 # Write metadata JSON
 METADATA_PATH="${SYSTEM_DIR}/video_metadata.json"
 NOW_ISO=$(date -u +%Y-%m-%dT%H:%M:%S)
-python3 -c "
+python3 - "$METADATA_PATH" "$NOW_ISO" "$VIDEO_ACTION" "$MATERIAL_DIR" "$(basename "$DEST_VIDEO")" \
+    "$VIDEO_CODEC" "$VIDEO_WIDTH" "$VIDEO_HEIGHT" "$R_FRAME_RATE" "${FPS:-}" "$DURATION" \
+    "$HAS_AUDIO" "$AUDIO_CODEC" "${AUDIO_DURATION:-}" "$FORMAT_DURATION" "${FORMAT_SIZE:-}" "${FORMAT_BITRATE:-}" <<'PY'
 import json
+import sys
+
+def optional_float(value):
+    return float(value) if value else None
+
+def optional_int(value):
+    return int(value) if value else None
+
+(
+    output_path,
+    generated_at,
+    source_video_action,
+    material_folder,
+    file_name,
+    video_codec,
+    video_width,
+    video_height,
+    r_frame_rate,
+    fps,
+    duration,
+    has_audio,
+    audio_codec,
+    audio_duration,
+    format_duration,
+    format_size,
+    format_bitrate,
+) = sys.argv[1:]
+
 meta = {
-    'generated_at': '$NOW_ISO',
-    'source_video_action': '$VIDEO_ACTION',
-    'material_folder': '$MATERIAL_DIR',
-    'file': '$(basename "$DEST_VIDEO")',
-    'video': {
-        'codec': '$VIDEO_CODEC',
-        'width': $VIDEO_WIDTH,
-        'height': $VIDEO_HEIGHT,
-        'r_frame_rate': '$R_FRAME_RATE',
-        'fps': ${FPS:-null},
-        'duration_seconds': $DURATION,
-        'nb_frames': None
+    "generated_at": generated_at,
+    "source_video_action": source_video_action,
+    "material_folder": material_folder,
+    "file": file_name,
+    "video": {
+        "codec": video_codec,
+        "width": int(video_width),
+        "height": int(video_height),
+        "r_frame_rate": r_frame_rate,
+        "fps": optional_float(fps),
+        "duration_seconds": float(duration),
+        "nb_frames": None,
     },
-    'audio': $(
-        if $HAS_AUDIO; then
-            echo "{\"codec\":\"$AUDIO_CODEC\",\"duration_seconds\":${AUDIO_DURATION:-null}}"
-        else
-            echo "null"
-        fi
-    ),
-    'format': {
-        'duration_seconds': $FORMAT_DURATION,
-        'size_bytes': ${FORMAT_SIZE:-null},
-        'bit_rate': ${FORMAT_BITRATE:-null}
-    }
+    "audio": {
+        "codec": audio_codec,
+        "duration_seconds": optional_float(audio_duration),
+    } if has_audio == "true" else None,
+    "format": {
+        "duration_seconds": optional_float(format_duration),
+        "size_bytes": optional_int(format_size),
+        "bit_rate": optional_int(format_bitrate),
+    },
 }
-with open('$METADATA_PATH', 'w') as f:
+with open(output_path, "w", encoding="utf-8") as f:
     json.dump(meta, f, indent=2, ensure_ascii=False)
-"
+PY
 
 # -- keyframe extraction ---------------------------------------------------
 
@@ -360,19 +393,22 @@ SELECTED_FRAMES_JSON+="]"
 # Write frame-index.json
 FRAME_INDEX_PATH="${SYSTEM_DIR}/frame-index.json"
 FINAL_SHEET_NAME="keyframes-reference-storyboard-contact-sheet-${NAME}.jpg"
-python3 -c "
+python3 - "$FRAME_INDEX_PATH" "$NOW_ISO" "$(basename "$DEST_VIDEO")" "$FINAL_SHEET_NAME" "$STORYBOARD_FRAMES" "$SELECTED_FRAMES_JSON" <<'PY'
 import json
+import sys
+
+output_path, generated_at, source_video, contact_sheet, frame_count, frames_json = sys.argv[1:]
 idx = {
-    'generated_at': '$NOW_ISO',
-    'source_video': '$(basename "$DEST_VIDEO")',
-    'contact_sheet': '$FINAL_SHEET_NAME',
-    'frame_count': $STORYBOARD_FRAMES,
-    'selection_method': 'uniform timestamps across source duration',
-    'frames': $SELECTED_FRAMES_JSON
+    "generated_at": generated_at,
+    "source_video": source_video,
+    "contact_sheet": contact_sheet,
+    "frame_count": int(frame_count),
+    "selection_method": "uniform timestamps across source duration",
+    "frames": json.loads(frames_json),
 }
-with open('$FRAME_INDEX_PATH', 'w') as f:
+with open(output_path, "w", encoding="utf-8") as f:
     json.dump(idx, f, indent=2, ensure_ascii=False)
-"
+PY
 
 # -- contact sheet (tile) generation ---------------------------------------
 
@@ -542,36 +578,59 @@ AIPACK
 MANIFEST_PATH="${SYSTEM_DIR}/run-manifest.json"
 UNIFORM_COUNT=$(find "$UNIFORM_DIR" -name '*.jpg' 2>/dev/null | wc -l | tr -d ' ')
 SCENE_COUNT=$(find "$SCENE_DIR" -name '*.jpg' 2>/dev/null | wc -l | tr -d ' ')
-python3 -c "
+python3 - "$MANIFEST_PATH" "$NOW_ISO" "$MATERIAL_DIR" "$DEST_VIDEO" "$METADATA_PATH" "$FRAME_INDEX_PATH" \
+    "$FINAL_SHEET" "$AI_INPUT_PACK" "${MATERIAL_DIR}/brief.md" "$PRODUCT_BRIEF_OUT" "$REFERENCE_PATH" \
+    "$DIRECTIONS_PATH" "$KEEP_WORK" "$STORYBOARD_FRAMES" "${UNIFORM_COUNT:-0}" "${SCENE_COUNT:-0}" <<'PY'
 import json
+import sys
+
+(
+    output_path,
+    generated_at,
+    material_folder,
+    video,
+    metadata,
+    frame_index,
+    final_storyboard_sheet,
+    ai_input_pack,
+    brief,
+    product_brief,
+    reference_path,
+    directions_path,
+    keep_work,
+    selected_count,
+    uniform_count,
+    scene_count,
+) = sys.argv[1:]
+
 m = {
-    'generated_at': '$NOW_ISO',
-    'script': 'start-reference-video.sh',
-    'material_folder': '$MATERIAL_DIR',
-    'video': '$DEST_VIDEO',
-    'metadata': '$METADATA_PATH',
-    'frame_index': '$FRAME_INDEX_PATH',
-    'final_storyboard_sheet': '$FINAL_SHEET',
-    'ai_input_pack': '$AI_INPUT_PACK',
-    'brief': '${MATERIAL_DIR}/brief.md',
-    'product_brief': '$PRODUCT_BRIEF_OUT',
-    'outputs': ['$REFERENCE_PATH', '$DIRECTIONS_PATH'],
-    'temp_work_dir_kept': $(if $KEEP_WORK; then echo true; else echo false; fi),
-    'frame_counts': {
-        'selected': $STORYBOARD_FRAMES,
-        'uniform': ${UNIFORM_COUNT:-0},
-        'scene': ${SCENE_COUNT:-0}
+    "generated_at": generated_at,
+    "script": "start-reference-video.sh",
+    "material_folder": material_folder,
+    "video": video,
+    "metadata": metadata,
+    "frame_index": frame_index,
+    "final_storyboard_sheet": final_storyboard_sheet,
+    "ai_input_pack": ai_input_pack,
+    "brief": brief,
+    "product_brief": product_brief,
+    "outputs": [reference_path, directions_path],
+    "temp_work_dir_kept": keep_work == "true",
+    "frame_counts": {
+        "selected": int(selected_count),
+        "uniform": int(uniform_count),
+        "scene": int(scene_count),
     },
-    'next_ai_inputs': [
-        'Read _system-review-系统复查资料/ai-input-pack.md.',
-        'Open final_storyboard_sheet once.',
-        'Use _system-review-系统复查资料/frame-index.json for timestamp and contact-sheet positions.',
-        'Replace skeleton text in outputs with AI analysis.'
-    ]
+    "next_ai_inputs": [
+        "Read _system-review-系统复查资料/ai-input-pack.md.",
+        "Open final_storyboard_sheet once.",
+        "Use _system-review-系统复查资料/frame-index.json for timestamp and contact-sheet positions.",
+        "Replace skeleton text in outputs with AI analysis.",
+    ],
 }
-with open('$MANIFEST_PATH', 'w') as f:
+with open(output_path, "w", encoding="utf-8") as f:
     json.dump(m, f, indent=2, ensure_ascii=False)
-"
+PY
 
 # -- cleanup ---------------------------------------------------------------
 
@@ -584,18 +643,33 @@ fi
 
 log "Done. Material folder: $MATERIAL_DIR"
 
-python3 -c "
+python3 - "$MATERIAL_DIR" "$AI_INPUT_PACK" "$FINAL_SHEET" "$FRAME_INDEX_PATH" "${MATERIAL_DIR}/brief.md" \
+    "$PRODUCT_BRIEF_OUT" "$REFERENCE_PATH" "$DIRECTIONS_PATH" "$MANIFEST_PATH" <<'PY'
 import json
+import sys
+
+(
+    material_folder,
+    ai_input_pack,
+    final_storyboard_sheet,
+    frame_index,
+    brief,
+    product_brief,
+    reference_storyboard,
+    creative_directions,
+    manifest,
+) = sys.argv[1:]
+
 result = {
-    'material_folder': '$MATERIAL_DIR',
-    'ai_input_pack': '$AI_INPUT_PACK',
-    'final_storyboard_sheet': '$FINAL_SHEET',
-    'frame_index': '$FRAME_INDEX_PATH',
-    'brief': '${MATERIAL_DIR}/brief.md',
-    'product_brief': '$PRODUCT_BRIEF_OUT',
-    'reference_storyboard': '$REFERENCE_PATH',
-    'creative_directions': '$DIRECTIONS_PATH',
-    'manifest': '$MANIFEST_PATH'
+    "material_folder": material_folder,
+    "ai_input_pack": ai_input_pack,
+    "final_storyboard_sheet": final_storyboard_sheet,
+    "frame_index": frame_index,
+    "brief": brief,
+    "product_brief": product_brief,
+    "reference_storyboard": reference_storyboard,
+    "creative_directions": creative_directions,
+    "manifest": manifest,
 }
 print(json.dumps(result, indent=2, ensure_ascii=False))
-"
+PY
