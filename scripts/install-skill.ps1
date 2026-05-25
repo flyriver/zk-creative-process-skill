@@ -7,6 +7,51 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+function Resolve-OptionalPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $null
+    }
+
+    $resolved = Resolve-Path -LiteralPath $Path -ErrorAction SilentlyContinue
+    if ($resolved) {
+        return $resolved.Path
+    }
+
+    return $null
+}
+
+function Copy-OptionalShellScripts {
+    param(
+        [string]$SourceDir,
+        [string]$DestinationDir
+    )
+
+    if ([string]::IsNullOrWhiteSpace($SourceDir)) {
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $DestinationDir -PathType Container)) {
+        New-Item -ItemType Directory -Path $DestinationDir -Force | Out-Null
+    }
+
+    $shellScripts = @(
+        'check-creative-material.sh',
+        'check-environment.sh',
+        'process-reference-video-phase1.sh',
+        'process-reference-videos-mix.sh',
+        'start-reference-video.sh'
+    )
+
+    foreach ($scriptName in $shellScripts) {
+        $scriptPath = Join-Path $SourceDir $scriptName
+        if (Test-Path -LiteralPath $scriptPath -PathType Leaf) {
+            Copy-Item -LiteralPath $scriptPath -Destination (Join-Path $DestinationDir $scriptName) -Force
+        }
+    }
+}
+
 $scriptParent = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')
 $selfContainedSkill = Test-Path -LiteralPath (Join-Path $scriptParent.Path 'SKILL.md') -PathType Leaf
 $source = if ($selfContainedSkill) {
@@ -15,6 +60,11 @@ $source = if ($selfContainedSkill) {
     Join-Path $scriptParent.Path 'skills\zk-creative-process'
 }
 $scriptsSource = Join-Path $source 'scripts'
+$rootScriptsSource = if ($selfContainedSkill) {
+    Resolve-OptionalPath (Join-Path $scriptParent.Path '..\..\scripts')
+} else {
+    Resolve-OptionalPath (Join-Path $scriptParent.Path 'scripts')
+}
 if (-not (Test-Path -LiteralPath $source -PathType Container)) {
     throw "Skill source not found: $source"
 }
@@ -30,7 +80,7 @@ if ([string]::IsNullOrWhiteSpace($CodexSkillsDir)) {
     if ([string]::IsNullOrWhiteSpace($homeDir)) {
         throw 'Cannot resolve home directory. Pass -CodexSkillsDir explicitly.'
     }
-    $CodexSkillsDir = Join-Path $homeDir '.codex\skills'
+    $CodexSkillsDir = Join-Path (Join-Path $homeDir '.codex') 'skills'
 }
 
 New-Item -ItemType Directory -Path $CodexSkillsDir -Force | Out-Null
@@ -61,9 +111,11 @@ if (Test-Path -LiteralPath $destination) {
 }
 
 Copy-Item -LiteralPath $source -Destination $destination -Recurse
-if (-not (Test-Path -LiteralPath (Join-Path $destination 'scripts') -PathType Container)) {
-    Copy-Item -LiteralPath $scriptsSource -Destination (Join-Path $destination 'scripts') -Recurse
+$destinationScripts = Join-Path $destination 'scripts'
+if (-not (Test-Path -LiteralPath $destinationScripts -PathType Container)) {
+    Copy-Item -LiteralPath $scriptsSource -Destination $destinationScripts -Recurse
 }
+Copy-OptionalShellScripts -SourceDir $rootScriptsSource -DestinationDir $destinationScripts
 "Installed zk-creative-process skill to: $destination"
-"Bundled scripts copied to: $(Join-Path $destination 'scripts')"
+"Bundled scripts copied to: $destinationScripts"
 "Restart Codex or start a new session if the skill does not appear immediately."

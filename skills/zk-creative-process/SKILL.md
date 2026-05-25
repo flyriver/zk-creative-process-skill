@@ -32,7 +32,7 @@ If ambiguous, default to `single`.
 ## Hard Rules
 
 - Run code setup before writing analysis.
-- Copy source videos by default. Use `-Move` only when the user explicitly asks to move originals.
+- Copy source videos by default. Use `-Move` on Windows or `--move` on macOS only when the user explicitly asks to move originals.
 - Keep original videos and keyframe contact sheets in the material root.
 - Keep product context in `product-brief-产品信息.md`.
 - Put metadata, frame index, manifest, and AI input pack in `_system-review-系统复查资料/`.
@@ -45,6 +45,8 @@ If ambiguous, default to `single`.
 
 Run from the repository root, or from the installed skill's `scripts/` folder:
 
+Windows / PowerShell:
+
 ```powershell
 .\scripts\process-reference-video-phase1.ps1 `
   -VideoPath "C:\path\to\reference.mp4" `
@@ -52,6 +54,17 @@ Run from the repository root, or from the installed skill's `scripts/` folder:
   -Name "english-name-中文说明" `
   -BaseDir ".\creative-materials" `
   -ProductBriefPath ".\my-product-brief.md"
+```
+
+macOS / bash:
+
+```bash
+bash ~/.codex/skills/zk-creative-process/scripts/process-reference-video-phase1.sh \
+  --video "/path/to/reference.mp4" \
+  --slug "short-slug" \
+  --name "english-name-中文说明" \
+  --base-dir "./creative-materials" \
+  --product-brief "./my-product-brief.md"
 ```
 
 `-ProductBriefPath` is optional. If omitted, the script creates a blank `product-brief-产品信息.md` template.
@@ -74,6 +87,8 @@ Fill:
 
 For multiple same-direction videos, create one direction folder, not multiple single folders:
 
+Windows / PowerShell:
+
 ```powershell
 .\scripts\process-reference-videos-mix.ps1 `
   -VideoPaths "C:\path\to\video-1.mp4","C:\path\to\video-2.mp4" `
@@ -81,6 +96,17 @@ For multiple same-direction videos, create one direction folder, not multiple si
   -Name "shared-direction-同方向说明" `
   -BaseDir ".\creative-materials" `
   -ProductBriefPath ".\my-product-brief.md"
+```
+
+macOS / bash:
+
+```bash
+bash ~/.codex/skills/zk-creative-process/scripts/process-reference-videos-mix.sh \
+  --videos "/path/to/video-1.mp4,/path/to/video-2.mp4" \
+  --slug "shared-direction" \
+  --name "shared-direction-同方向说明" \
+  --base-dir "./creative-materials" \
+  --product-brief "./my-product-brief.md"
 ```
 
 The `brief.md` should list all videos, their shared theme, differences, transferable structure, and unified test goal.

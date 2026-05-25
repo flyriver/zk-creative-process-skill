@@ -1,5 +1,13 @@
 # Troubleshooting
 
+# Troubleshooting
+
+## macOS: FFmpeg/FFprobe Killed (SIGKILL / exit code 137)
+
+If running inside a sandboxed agent environment, macOS security policy may prevent ffmpeg/ffprobe from executing directly. The binary may be killed with signal 9.
+
+Workaround: run the scripts directly in your terminal, then ask Codex or Cursor to read the generated files.
+
 ## FFmpeg Not Found
 
 The scripts need both `ffmpeg` and `ffprobe`.
@@ -30,7 +38,17 @@ If FFmpeg is installed but not on PATH, pass explicit paths:
   -FfprobePath "C:\ffmpeg\bin\ffprobe.exe"
 ```
 
-## PowerShell Script Execution Is Disabled
+```bash
+./scripts/process-reference-video-phase1.sh \
+  --video "/path/to/video.mp4" \
+  --slug "test-video" \
+  --name "test-video-测试视频" \
+  --product-brief "./my-product-brief.md" \
+  --ffmpeg "/opt/homebrew/bin/ffmpeg" \
+  --ffprobe "/opt/homebrew/bin/ffprobe"
+```
+
+## PowerShell Script Execution Is Disabled (Windows Only)
 
 If Windows blocks script execution, run PowerShell as your normal user and set:
 
@@ -65,6 +83,27 @@ python "$env:USERPROFILE\.codex\skills\.system\skill-creator\scripts\quick_valid
 
 This repository intentionally uses Chinese filenames in generated analysis files, so UTF-8 validation is expected.
 
+## macOS Skill Install Paths
+
+Use the shared macOS installer from the repository root:
+
+```bash
+bash scripts/install-skill.sh --agent codex
+bash scripts/install-skill.sh --agent cursor
+```
+
+Codex installs to `~/.codex/skills/zk-creative-process/`.
+
+Cursor installs to `~/.cursor/skills/zk-creative-process/`.
+
+If you are checking the installed runtime manually, both macOS paths should contain:
+
+- `scripts/check-environment.sh`
+- `scripts/check-creative-material.sh`
+- `scripts/process-reference-video-phase1.sh`
+- `scripts/process-reference-videos-mix.sh`
+- `scripts/start-reference-video.sh`
+
 ## Source Video Disappeared
 
 Current scripts copy source videos by default. Originals stay in their original folder.
@@ -81,7 +120,7 @@ The default extracts 12 selected frames plus intermediate frames. For very long 
 
 ## Output Contains TODO
 
-This is expected immediately after script setup. The script creates skeleton files. Codex should then fill:
+This is expected immediately after script setup. The script creates skeleton files. Codex or Cursor should then fill:
 
 - `product-brief-产品信息.md`
 - `outputs/reference-video-storyboard-原视频场景变化分镜.md`
@@ -95,7 +134,7 @@ For a `mix` folder, Codex should fill:
 
 Fill `product-brief-产品信息.md` or pass an existing file with `-ProductBriefPath`.
 
-Without product context, Codex should only deconstruct the reference video and list missing product questions. It should not invent gameplay, assets, audience, or compliance constraints.
+Without product context, Codex or Cursor should only deconstruct the reference video and list missing product questions. It should not invent gameplay, assets, audience, or compliance constraints.
 
 ## Do Not Commit Generated Materials
 

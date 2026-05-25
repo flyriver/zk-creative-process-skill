@@ -1,6 +1,6 @@
-# ZK Creative Process Skill
+# ZK Creative Process
 
-A Codex skill and PowerShell toolkit for processing game-ad reference videos into clean creative-analysis folders.
+A Codex and Cursor skill toolkit for processing game-ad reference videos into clean creative-analysis folders.
 
 Core workflow:
 
@@ -26,9 +26,19 @@ creative-materials/YYYY-MM-DD-slug-name/
     video_metadata.json
 ```
 
-`product-brief-产品信息.md` is the bridge from reference analysis to your own product. If it is empty, Codex should not invent product facts; mapping stays pending.
+`product-brief-产品信息.md` is the bridge from reference analysis to your own product. If it is empty, Codex or Cursor should not invent product facts; mapping stays pending.
+
+## Support Matrix
+
+| Platform | Agent | Install command | Runtime |
+|----------|-------|-----------------|---------|
+| Windows | Codex | `powershell -File .\scripts\install-skill.ps1` | PowerShell scripts |
+| macOS | Codex | `bash scripts/install-skill.sh --agent codex` | bash scripts |
+| macOS | Cursor | `bash scripts/install-skill.sh --agent cursor` | bash scripts |
 
 ## Install
+
+### Windows / Codex
 
 Run from this repository root:
 
@@ -44,6 +54,34 @@ If the skill already exists, the installer stops. Choose explicitly:
 ```
 
 `-Backup` keeps the old installed skill. `-Force` replaces it.
+
+### macOS / Codex and Cursor
+
+Run from this repository root:
+
+```bash
+bash scripts/install-skill.sh --agent codex
+bash scripts/install-skill.sh --agent cursor
+```
+
+`--agent` is required so the installer can choose the correct skill package and install path.
+
+If the skill already exists, choose explicitly:
+
+```bash
+bash scripts/install-skill.sh --agent codex --backup
+bash scripts/install-skill.sh --agent codex --force
+bash scripts/install-skill.sh --agent cursor --backup
+bash scripts/install-skill.sh --agent cursor --force
+```
+
+To install as a project-scoped Cursor skill:
+
+```bash
+bash scripts/install-skill.sh --agent cursor --project
+```
+
+`--project` is only supported with `--agent cursor`.
 
 ## Use In Codex
 
@@ -61,10 +99,26 @@ Same-direction batch:
 
 The scripts copy source videos by default. Originals stay where they are. Use `-Move` only when you deliberately want originals moved into the material folder.
 
+On macOS, use the bash runtime from the installed skill or the repository root. For example:
+
+```bash
+bash ~/.codex/skills/zk-creative-process/scripts/process-reference-video-phase1.sh \
+  --video "/path/to/reference.mp4" \
+  --slug "short-slug" \
+  --name "English-Name-中文说明" \
+  --base-dir "./creative-materials"
+```
+
 ## Requirements
 
 - PowerShell 7+ recommended.
 - FFmpeg and FFprobe available on PATH, or pass `-FfmpegPath` and `-FfprobePath`.
+
+Install FFmpeg on macOS:
+
+```bash
+brew install ffmpeg
+```
 
 Check environment:
 
@@ -72,10 +126,18 @@ Check environment:
 .\scripts\check-environment.ps1
 ```
 
+```bash
+./scripts/check-environment.sh
+```
+
 Validate generated material:
 
 ```powershell
 .\scripts\check-creative-material.ps1 -MaterialDir ".\creative-materials\YYYY-MM-DD-slug-name"
+```
+
+```bash
+./scripts/check-creative-material.sh --material-dir ./creative-materials/YYYY-MM-DD-slug-name
 ```
 
 Validate skill metadata on Windows:
