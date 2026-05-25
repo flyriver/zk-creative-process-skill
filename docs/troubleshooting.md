@@ -2,7 +2,7 @@
 
 ## macOS: FFmpeg/FFprobe Killed (SIGKILL / exit code 137)
 
-If running inside a WorkBuddy or sandboxed agent environment, the macOS security policy may prevent ffmpeg/ffprobe from executing directly. The binary will be killed with signal 9 (SIGKILL).
+If running inside a sandboxed agent environment (Cursor's restricted shell, container sandboxes, etc.), macOS security policy may prevent ffmpeg/ffprobe from executing directly. The binary will be killed with signal 9 (SIGKILL).
 
 **Workaround:** Run the scripts directly in your terminal (outside the sandbox):
 
@@ -94,13 +94,13 @@ The default extracts 12 selected frames plus intermediate frames. For very long 
 
 ## Output Contains TODO
 
-This is expected immediately after script setup. The script creates skeleton files. Codex should then fill:
+This is expected immediately after script setup. The script creates skeleton files. The agent (Cursor or Codex) should then fill:
 
 - `product-brief-产品信息.md`
 - `outputs/reference-video-storyboard-原视频场景变化分镜.md`
 - `outputs/creative-script-directions-创意脚本方向.md`
 
-For a `mix` folder, Codex should fill:
+For a `mix` folder, the agent should fill:
 
 - `outputs/shared-analysis-同方向素材共性拆解.md`
 
@@ -108,7 +108,7 @@ For a `mix` folder, Codex should fill:
 
 Fill `product-brief-产品信息.md` or pass an existing file with `-ProductBriefPath`.
 
-Without product context, Codex should only deconstruct the reference video and list missing product questions. It should not invent gameplay, assets, audience, or compliance constraints.
+Without product context, the agent should only deconstruct the reference video and list missing product questions. It should not invent gameplay, assets, audience, or compliance constraints.
 
 ## Do Not Commit Generated Materials
 

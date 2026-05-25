@@ -2,15 +2,18 @@
 
 ## Scope
 
-This repository packages the `zk-creative-process` Codex skill and its PowerShell helper scripts.
-The `workbuddy-macos-port` branch adds bash script ports for macOS/Linux and a WorkBuddy-compatible skill definition.
+This repository packages the `zk-creative-process` skill and its helper scripts.
+
+- `main` branch: Codex skill on Windows with PowerShell scripts.
+- `workbuddy-macos-port` branch (legacy): WorkBuddy skill definition with bash script ports.
+- `cursor-port` branch (active): Cursor Agent Skill with bash scripts for macOS/Linux.
 
 ## Structure
 
 - `skills/zk-creative-process/`: the installable, self-contained Codex skill (PowerShell/Windows).
-- `skills/zk-creative-process-macos/`: the macOS/WorkBuddy skill definition (bash/Linux).
+- `skills/zk-creative-process-cursor/`: the Cursor Agent Skill source (installs as `zk-creative-process` under `~/.cursor/skills/`).
 - `skills/zk-creative-process/scripts/`: PowerShell scripts bundled with the Codex skill.
-- `scripts/`: repository-level copies. On `main`: PowerShell. On `workbuddy-macos-port`: bash + PowerShell.
+- `scripts/`: repository-level copies. On `main`: PowerShell. On `cursor-port`: bash + PowerShell.
 - `docs/`: troubleshooting and longer usage notes.
 - `examples/`: lightweight examples only; no private creative materials.
 
@@ -21,3 +24,4 @@ The `workbuddy-macos-port` branch adds bash script ports for macOS/Linux and a W
 - Do not commit source videos, generated `creative-materials/`, private ad data, or strategy notes.
 - Keep `README.md` as the entry guide. Put longer explanations in `docs/`.
 - Validate bash syntax with `bash -n` after script changes. Validate PowerShell syntax after `.ps1` changes.
+- Cursor skill source lives at `skills/zk-creative-process-cursor/` but is installed as `zk-creative-process` (the YAML `name` field). Keep these in sync.

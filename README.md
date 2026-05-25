@@ -1,4 +1,4 @@
-# ZK Creative Process (macOS / WorkBuddy)
+# ZK Creative Process (Cursor / macOS)
 
 Process game-ad reference videos into structured creative-analysis folders.
 **Scripts handle file operations — AI handles creative analysis.**
@@ -40,22 +40,30 @@ Then verify:
 ./scripts/check-environment.sh
 ```
 
-## Install the Skill
+## Install the Cursor Skill
 
-Run the installer from this repository root. It copies both the skill definition and the bash scripts it needs at runtime:
+Run the installer from this repository root. It copies the skill definition and the bash scripts it needs at runtime to `~/.cursor/skills/zk-creative-process/`:
 
 ```bash
-bash scripts/install-workbuddy-skill.sh
+bash scripts/install-cursor-skill.sh
 ```
 
 If the skill already exists, choose explicitly:
 
 ```bash
-bash scripts/install-workbuddy-skill.sh --backup
-bash scripts/install-workbuddy-skill.sh --force
+bash scripts/install-cursor-skill.sh --backup
+bash scripts/install-cursor-skill.sh --force
 ```
 
-The skill is now available in WorkBuddy with its bundled scripts under `~/.workbuddy/skills/zk-creative-process-macos/scripts/`.
+To install as a project-scoped skill (only available when this repo is open in Cursor):
+
+```bash
+bash scripts/install-cursor-skill.sh --project
+```
+
+After install, the skill is available in Cursor. Ask the agent something like:
+
+> Use `$zk-creative-process` to process this reference video at `/path/to/video.mp4` with slug `tower-defense` and name `Tower-Defense-塔防`.
 
 ## Usage
 
@@ -99,7 +107,7 @@ Mix mode uses `--frames 8` by default, per video.
 ## After the Script Runs
 
 The script produces a complete folder with keyframes, metadata, and AI-ready skeleton files.
-**Then let WorkBuddy (or any AI assistant) read the generated files:**
+**Then let Cursor's agent (or any AI assistant) read the generated files:**
 
 1. `_system-review-系统复查资料/ai-input-pack.md` — overview of all paths and rules
 2. `_system-review-系统复查资料/frame-index.json` — frame timestamps
@@ -127,13 +135,13 @@ The AI will then fill:
 Each story direction includes: core hypothesis, hook, story premise, product bridge, fit assessment, missing-info checklist, scalable variants, and human decision questions.
 
 > **Important:** The first stage is a direction pool. Do NOT create production storyboards until a direction is selected.
-> If running inside a WorkBuddy sandbox, ffmpeg/ffprobe may be blocked.
+> If running inside a sandboxed agent environment, ffmpeg/ffprobe may be blocked.
 > Run the scripts in your terminal first, then ask the AI to read the generated files.
 > See [troubleshooting](docs/troubleshooting.md) for details.
 
 ## Windows / Codex
 
-This branch (`workbuddy-macos-port`) targets macOS and Linux with bash scripts.
+This branch (`cursor-port`) targets Cursor on macOS/Linux with bash scripts.
 For the Windows/PowerShell + Codex version, switch to:
 
 ```bash
