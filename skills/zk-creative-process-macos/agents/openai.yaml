@@ -1,0 +1,4 @@
+interface:
+  display_name: "ZK Creative Process (macOS)"
+  short_description: "Reference-video deconstruction and product mapping — macOS/Linux port with bash scripts"
+  default_prompt: "Use single mode for one game ad reference video, or mix mode for a same-direction batch. Scripts run first (bash), AI analyzes after. Fill product-brief-产品信息.md before mapping into your own product."

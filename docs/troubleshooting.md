@@ -1,5 +1,18 @@
 # Troubleshooting
 
+## macOS: FFmpeg/FFprobe Killed (SIGKILL / exit code 137)
+
+If running inside a WorkBuddy or sandboxed agent environment, the macOS security policy may prevent ffmpeg/ffprobe from executing directly. The binary will be killed with signal 9 (SIGKILL).
+
+**Workaround:** Run the scripts directly in your terminal (outside the sandbox):
+
+```bash
+cd /path/to/zk-creative-process-skill
+./scripts/process-reference-video-phase1.sh --video "path/to/video.mp4" --slug "test" --name "test-测试"
+```
+
+After the script completes, ask your AI assistant to read the generated `ai-input-pack.md` and fill the analysis documents.
+
 ## FFmpeg Not Found
 
 The scripts need both `ffmpeg` and `ffprobe`.

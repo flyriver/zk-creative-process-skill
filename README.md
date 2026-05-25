@@ -59,7 +59,44 @@ Same-direction batch:
 用 $zk-creative-process mix 把这几个同方向视频合并分析：C:\path\to\video-1.mp4, C:\path\to\video-2.mp4
 ```
 
-The scripts copy source videos by default. Originals stay where they are. Use `-Move` only when you deliberately want originals moved into the material folder.
+The scripts copy source videos by default. Originals stay where they are. Use `-Move` (PowerShell) or `--move` (bash) only when you deliberately want originals moved into the material folder.
+
+## macOS / WorkBuddy
+
+This branch includes bash script ports for macOS and Linux. No PowerShell required.
+
+### Install (macOS)
+
+```bash
+brew install ffmpeg
+./scripts/check-environment.sh
+```
+
+### Use on macOS
+
+Single reference video:
+
+```bash
+./scripts/process-reference-video-phase1.sh \
+  --video "/path/to/video.mp4" \
+  --slug "short-slug" \
+  --name "english-name-中文说明" \
+  --base-dir "./creative-materials"
+```
+
+Same-direction batch:
+
+```bash
+./scripts/process-reference-videos-mix.sh \
+  --videos "/path/to/vid1.mp4,/path/to/vid2.mp4" \
+  --slug "shared-direction" \
+  --name "shared-direction-同方向说明" \
+  --base-dir "./creative-materials"
+```
+
+After the script runs, ask WorkBuddy (or any AI coding assistant) to read `_system-review-系统复查资料/ai-input-pack.md` and fill the analysis documents.
+
+**Note:** If running inside a WorkBuddy sandbox, ffmpeg/ffprobe may be blocked. Run the scripts in your terminal first, then ask the AI to read the generated files. See [troubleshooting](docs/troubleshooting.md) for details.
 
 ## Requirements
 
