@@ -173,6 +173,8 @@ python "$env:USERPROFILE\.codex\skills\.system\skill-creator\scripts\quick_valid
 
 - [Creative process guide](docs/creative-process-guide.md)
 - [Folder structure](docs/example-folder-structure.md)
+- [Skill implementation](docs/implementation.md)
+- [技能实现交互版](docs/implementation.zh.html)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Single example](examples/single/README.md)
 - [Mix example](examples/mix/README.md)

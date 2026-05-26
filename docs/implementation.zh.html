@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>zk-creative-process 技能实现说明</title>
+  <style>
+    :root {
+      --bg: #f7f7f4;
+      --panel: #ffffff;
+      --ink: #202124;
+      --muted: #626b72;
+      --line: #d9ded8;
+      --code: #111827;
+      --code-bg: #eef1ef;
+      --teal: #0f766e;
+      --blue: #1d4ed8;
+      --amber: #a16207;
+      --red: #b91c1c;
+      --green: #15803d;
+      --shadow: 0 14px 35px rgba(31, 41, 55, 0.09);
+      --radius: 8px;
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.68;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    code,
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 288px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(10px);
+      padding: 22px 16px;
+      overflow: auto;
+    }
+
+    .brand {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .search {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 10px 12px;
+      color: var(--ink);
+      font: inherit;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+    }
+
+    .nav {
+      display: grid;
+      gap: 4px;
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 36px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      color: #364047;
+      font-size: 14px;
+    }
+
+    .nav a:hover,
+    .nav a.active {
+      background: #e8f2ef;
+      color: #0f4f49;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 99px;
+      background: var(--teal);
+      flex: 0 0 auto;
+    }
+
+    .dot.blue { background: var(--blue); }
+    .dot.amber { background: var(--amber); }
+    .dot.red { background: var(--red); }
+    .dot.green { background: var(--green); }
+
+    .main {
+      min-width: 0;
+    }
+
+    .hero {
+      padding: 48px clamp(22px, 5vw, 70px) 28px;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(90deg, rgba(15, 118, 110, 0.08), rgba(29, 78, 216, 0.06) 52%, rgba(161, 98, 7, 0.08));
+    }
+
+    .hero h2 {
+      margin: 0;
+      max-width: 880px;
+      font-size: clamp(32px, 5vw, 58px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      max-width: 780px;
+      margin: 18px 0 0;
+      color: #425057;
+      font-size: 17px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .btn,
+    .tab {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      font: inherit;
+      min-height: 38px;
+      padding: 8px 12px;
+    }
+
+    .btn:hover,
+    .tab:hover,
+    .tab.active {
+      border-color: rgba(15, 118, 110, 0.45);
+      background: #edf7f4;
+      color: #0d5952;
+    }
+
+    .content {
+      padding: 28px clamp(22px, 5vw, 70px) 70px;
+      display: grid;
+      gap: 22px;
+    }
+
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      scroll-margin-top: 18px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-header h3 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    .section-header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .section-body {
+      padding: 20px 22px 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tile {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 15px;
+      background: #fcfcfb;
+    }
+
+    .tile h4 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .tile p,
+    .tile li {
+      color: #455057;
+      font-size: 14px;
+    }
+
+    .tile p {
+      margin: 0;
+    }
+
+    .tile ul,
+    .section-body ul,
+    .section-body ol {
+      margin: 8px 0 0;
+      padding-left: 20px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 9px;
+      color: #39444b;
+      background: #f6f8f6;
+      font-size: 12px;
+    }
+
+    .code-block {
+      margin: 12px 0 0;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: auto;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px 16px;
+      color: var(--code);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfb;
+      padding: 12px;
+      min-height: 92px;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #1f2937;
+    }
+
+    .step span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .accordion {
+      display: grid;
+      gap: 10px;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fcfcfb;
+      overflow: hidden;
+    }
+
+    summary {
+      cursor: pointer;
+      padding: 13px 15px;
+      font-weight: 700;
+    }
+
+    details > div {
+      border-top: 1px solid var(--line);
+      padding: 12px 15px 15px;
+      color: #455057;
+    }
+
+    .compare {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: var(--radius);
+    }
+
+    .compare th,
+    .compare td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .compare th {
+      background: #edf1ef;
+      color: #263238;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 9px;
+      margin-top: 8px;
+    }
+
+    .check {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      background: #fcfcfb;
+    }
+
+    .check input {
+      margin-top: 6px;
+      accent-color: var(--teal);
+    }
+
+    .check.done {
+      color: var(--muted);
+      background: #f1f6f3;
+    }
+
+    .callout {
+      border-left: 4px solid var(--amber);
+      background: #fff8e7;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 12px 14px;
+      color: #553b06;
+      margin: 14px 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .no-results {
+      display: none;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      color: var(--muted);
+      background: var(--panel);
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid,
+      .grid.two,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .hero {
+        padding-top: 34px;
+      }
+
+      .nav {
+        grid-template-columns: 1fr;
+      }
+
+      .section-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .btn,
+      .tab {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>zk-creative-process</h1>
+        <p>技能实现交互版</p>
+      </div>
+      <input id="search" class="search" type="search" placeholder="搜索：安装、single、manifest、校验">
+      <ul class="nav" id="nav">
+        <li><a href="#overview" class="active"><span class="dot"></span>总体架构</a></li>
+        <li><a href="#packages"><span class="dot blue"></span>技能包</a></li>
+        <li><a href="#install"><span class="dot amber"></span>安装逻辑</a></li>
+        <li><a href="#runtime"><span class="dot green"></span>运行流程</a></li>
+        <li><a href="#contracts"><span class="dot"></span>输出契约</a></li>
+        <li><a href="#validation"><span class="dot red"></span>校验与安全</a></li>
+        <li><a href="#development"><span class="dot blue"></span>开发维护</a></li>
+      </ul>
+    </aside>
+
+    <main class="main">
+      <header class="hero">
+        <h2>zk-creative-process 技能是如何实现的</h2>
+        <p>这个页面把 Markdown 实现文档转换成中文交互版：按架构、安装、运行、产物、校验和维护拆解。核心思想是让脚本负责确定性的文件和视频处理，让 Agent 负责创意判断与分析写作。</p>
+        <div class="toolbar">
+          <button class="btn" id="expandAll" type="button">展开全部</button>
+          <button class="btn" id="collapseAll" type="button">折叠全部</button>
+          <button class="btn" id="resetChecks" type="button">重置清单</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="no-results" id="noResults">没有匹配内容。请尝试搜索脚本名、文件名、模式名或安装参数。</div>
+
+        <section class="section" id="overview" data-search="总体架构 scripts agent deterministic filesystem video metadata keyframe validation">
+          <div class="section-header">
+            <div>
+              <h3>总体架构</h3>
+              <p>技能被刻意拆成 Agent 指令层和脚本执行层。</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="grid two">
+              <article class="tile">
+                <h4>Agent 指令层</h4>
+                <p>负责判断什么时候使用技能、选择 `single` 或 `mix`、读取脚本生成的资料，并把骨架 Markdown 替换成创意分析。</p>
+                <div class="pill-row">
+                  <span class="pill">SKILL.md</span>
+                  <span class="pill">路由规则</span>
+                  <span class="pill">写作要求</span>
+                </div>
+              </article>
+              <article class="tile">
+                <h4>脚本执行层</h4>
+                <p>负责创建目录、复制视频、探测元数据、抽帧、生成接触表、写入 manifest，并校验产物是否完整。</p>
+                <div class="pill-row">
+                  <span class="pill">ffmpeg</span>
+                  <span class="pill">ffprobe</span>
+                  <span class="pill">JSON</span>
+                  <span class="pill">校验器</span>
+                </div>
+              </article>
+            </div>
+
+            <div class="code-block">
+              <pre>.
+  README.md
+  AGENTS.md
+  docs/
+  examples/
+  scripts/
+  skills/
+    zk-creative-process/
+    zk-creative-process-cursor/
+    zk-creative-process-workbuddy/</pre>
+            </div>
+
+            <div class="callout">设计约束：不要让 Agent 在分析前手工猜目录、手工放文件或临时组织素材。必须先由脚本生成稳定的材料文件夹和系统复查资料。</div>
+          </div>
+        </section>
+
+        <section class="section" id="packages" data-search="Codex Cursor WorkBuddy packages SKILL.md openai.yaml PowerShell bash">
+          <div class="section-header">
+            <div>
+              <h3>技能包</h3>
+              <p>三个 Agent 使用同一个技能名，但安装源和默认路径不同。</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="grid">
+              <article class="tile">
+                <h4>Codex</h4>
+                <p><code>skills/zk-creative-process/</code></p>
+                <ul>
+                  <li>包含 Codex 版 <code>SKILL.md</code></li>
+                  <li>包含 <code>agents/openai.yaml</code></li>
+                  <li>源包内直接带 PowerShell 脚本</li>
+                </ul>
+              </article>
+              <article class="tile">
+                <h4>Cursor</h4>
+                <p><code>skills/zk-creative-process-cursor/</code></p>
+                <ul>
+                  <li>安装后名称仍是 <code>zk-creative-process</code></li>
+                  <li>路径指向 <code>~/.cursor/skills/...</code></li>
+                  <li>安装时注入 bash runtime</li>
+                </ul>
+              </article>
+              <article class="tile">
+                <h4>WorkBuddy</h4>
+                <p><code>skills/zk-creative-process-workbuddy/</code></p>
+                <ul>
+                  <li>与 Cursor 包结构接近</li>
+                  <li>路径指向 <code>~/.workbuddy/skills/...</code></li>
+                  <li>安装时注入 bash runtime</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="install" data-search="install macOS Windows installer --agent --backup --force project skills dir">
+          <div class="section-header">
+            <div>
+              <h3>安装逻辑</h3>
+              <p>安装器默认不覆盖已有技能，必须显式选择备份或替换。</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="tabs" role="tablist">
+              <button class="tab active" data-tab="mac" type="button">macOS</button>
+              <button class="tab" data-tab="win" type="button">Windows</button>
+            </div>
+
+            <div class="tab-panel active" id="tab-mac">
+              <div class="code-block">
+                <pre>bash scripts/install-skill.sh --agent codex
+bash scripts/install-skill.sh --agent cursor
+bash scripts/install-skill.sh --agent workbuddy</pre>
+              </div>
+              <ol>
+                <li>要求传入 <code>--agent</code>。</li>
+                <li>根据 Agent 选择源包：Codex、Cursor 或 WorkBuddy。</li>
+                <li>确定安装根目录：<code>~/.codex/skills</code>、<code>~/.cursor/skills</code> 或 <code>~/.workbuddy/skills</code>。</li>
+                <li>复制源包到 <code>&lt;skills-dir&gt;/zk-creative-process</code>。</li>
+                <li>从仓库根 <code>scripts/</code> 复制 bash runtime 到已安装技能的 <code>scripts/</code>。</li>
+                <li>对 bash 脚本执行 <code>chmod +x</code>。</li>
+              </ol>
+              <div class="pill-row">
+                <span class="pill">--backup 备份旧版本</span>
+                <span class="pill">--force 替换旧版本</span>
+                <span class="pill">--project 仅 Cursor 支持</span>
+              </div>
+            </div>
+
+            <div class="tab-panel" id="tab-win">
+              <div class="code-block">
+                <pre>.\scripts\install-skill.ps1
+.\scripts\install-skill.ps1 -Backup
+.\scripts\install-skill.ps1 -Force</pre>
+              </div>
+              <ol>
+                <li>解析技能源目录。</li>
+                <li>默认安装到 <code>%USERPROFILE%\.codex\skills</code>。</li>
+                <li>复制 <code>skills\zk-creative-process</code> 到目标目录。</li>
+                <li>复制 runtime 脚本到安装包内。</li>
+                <li>如果目标已存在，除非传入 <code>-Backup</code> 或 <code>-Force</code>，否则直接停止。</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="runtime" data-search="runtime single mix process reference video phase1 start frame contact sheet ai input pack">
+          <div class="section-header">
+            <div>
+              <h3>运行流程</h3>
+              <p><code>single</code> 和 <code>mix</code> 都是脚本先行、AI 后写。</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="tabs" role="tablist">
+              <button class="tab active" data-tab="single" type="button">single 模式</button>
+              <button class="tab" data-tab="mix" type="button">mix 模式</button>
+            </div>
+
+            <div class="tab-panel active" id="tab-single">
+              <div class="flow">
+                <div class="step"><strong>1. 路由</strong><span>一个参考视频，或未说明多个视频属于同一方向。</span></div>
+                <div class="step"><strong>2. 编排</strong><span><code>process-reference-video-phase1</code> 调用核心引擎。</span></div>
+                <div class="step"><strong>3. 处理</strong><span>复制视频、ffprobe、抽帧、生成接触表。</span></div>
+                <div class="step"><strong>4. 校验</strong><span>运行材料目录校验，返回 JSON 状态。</span></div>
+                <div class="step"><strong>5. 写作</strong><span>Agent 读取系统资料并替换输出骨架。</span></div>
+              </div>
+              <div class="code-block">
+                <pre>bash scripts/process-reference-video-phase1.sh \
+  --video "/path/to/reference.mp4" \
+  --slug "short-slug" \
+  --name "english-name-中文说明" \
+  --base-dir "./creative-materials"</pre>
+              </div>
+            </div>
+
+            <div class="tab-panel" id="tab-mix">
+              <div class="flow">
+                <div class="step"><strong>1. 路由</strong><span>两个以上视频被明确说明为同方向、同 hook 或同批次。</span></div>
+                <div class="step"><strong>2. 建目录</strong><span>创建一个方向级材料文件夹，而不是多个 single 文件夹。</span></div>
+                <div class="step"><strong>3. 批处理</strong><span>每个视频复制、探测元数据、抽取选帧。</span></div>
+                <div class="step"><strong>4. 共性资料</strong><span>每个视频一张接触表，共用一个 shared analysis。</span></div>
+                <div class="step"><strong>5. 写作</strong><span>Agent 产出方向级共性拆解和方向池。</span></div>
+              </div>
+              <div class="code-block">
+                <pre>bash scripts/process-reference-videos-mix.sh \
+  --videos "/path/a.mp4,/path/b.mp4" \
+  --slug "shared-direction" \
+  --name "shared-direction-同方向说明" \
+  --base-dir "./creative-materials"</pre>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="contracts" data-search="folder contract metadata frame-index ai-input-pack run-manifest brief product brief outputs">
+          <div class="section-header">
+            <div>
+              <h3>输出契约</h3>
+              <p>材料根目录给人看，<code>_system-review-系统复查资料/</code> 给自动化和复查使用。</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="tabs" role="tablist">
+              <button class="tab active" data-tab="folderSingle" type="button">single 目录</button>
+              <button class="tab" data-tab="folderMix" type="button">mix 目录</button>
+              <button class="tab" data-tab="systemFiles" type="button">系统文件</button>
+            </div>
+
+            <div class="tab-panel active" id="tab-folderSingle">
+              <div class="code-block">
+                <pre>creative-materials/YYYY-MM-DD-slug-name/
+  original-name.ext
+  keyframes-reference-storyboard-contact-sheet-name.jpg
+  brief.md
+  product-brief-产品信息.md
+  outputs/
+    reference-video-storyboard-原视频场景变化分镜.md
+    creative-script-directions-创意脚本方向.md
+  _system-review-系统复查资料/
+    ai-input-pack.md
+    frame-index.json
+    run-manifest.json
+    video_metadata.json</pre>
+              </div>
+            </div>
+
+            <div class="tab-panel" id="tab-folderMix">
+              <div class="code-block">
+                <pre>creative-materials/YYYY-MM-DD-slug-name/
+  video-01-source-name.ext
+  video-02-source-name.ext
+  keyframes-reference-storyboard-contact-sheet-name-video-01.jpg
+  keyframes-reference-storyboard-contact-sheet-name-video-02.jpg
+  brief.md
+  product-brief-产品信息.md
+  outputs/
+    shared-analysis-同方向素材共性拆解.md
+  _system-review-系统复查资料/
+    ai-input-pack.md
+    frame-index.json
+    run-manifest.json
+    video_metadata.json</pre>
+              </div>
+            </div>
+
+            <div class="tab-panel" id="tab-systemFiles">
+              <table class="compare">
+                <thead>
+                  <tr>
+                    <th>文件</th>
+                    <th>作用</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>video_metadata.json</code></td>
+                    <td>记录生成时间、视频文件、分辨率、时长、编码、音频和格式信息。mix 模式下是视频数组。</td>
+                  </tr>
+                  <tr>
+                    <td><code>frame-index.json</code></td>
+                    <td>记录选帧时间戳、接触表位置、每张接触表与源视频的对应关系。</td>
+                  </tr>
+                  <tr>
+                    <td><code>ai-input-pack.md</code></td>
+                    <td>Agent 交接文件：列出需要读取的路径，并重复第一阶段规则。</td>
+                  </tr>
+                  <tr>
+                    <td><code>run-manifest.json</code></td>
+                    <td>记录本次运行生成的路径和状态，用于复查、调试和后续自动化。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="accordion" style="margin-top:14px">
+              <details>
+                <summary>product-brief-产品信息.md 为什么是门禁文件</summary>
+                <div>它是从参考素材映射到用户产品的事实来源。如果文件为空或仍有 TODO，Agent 只能完成参考视频拆解，不能编造产品品类、玩法、素材限制或转化目标。</div>
+              </details>
+              <details>
+                <summary>outputs/ 中的文件什么时候被填充</summary>
+                <div>脚本只写骨架。Agent 必须先读取 ai-input-pack、frame-index、metadata、接触表和 product brief，然后把 TODO 替换为分析内容。</div>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="validation" data-search="validation safety check creative material copy default move force backup strict TODO gitignore">
+          <div class="section-header">
+            <div>
+              <h3>校验与安全</h3>
+              <p>默认保护源文件、安装目录和已生成材料。</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="grid two">
+              <article class="tile">
+                <h4>校验器检查</h4>
+                <ul>
+                  <li><code>brief.md</code> 和 <code>product-brief-产品信息.md</code></li>
+                  <li>系统目录和四个系统文件</li>
+                  <li>至少一张 keyframe contact sheet</li>
+                  <li>single 的 <code>original-*</code> 或 mix 的 <code>video-*</code></li>
+                  <li>single 或 mix 对应的输出文件</li>
+                  <li>非系统 Markdown 中残留的 TODO</li>
+                </ul>
+              </article>
+              <article class="tile">
+                <h4>安全策略</h4>
+                <ul>
+                  <li>源视频默认复制，不移动。</li>
+                  <li>移动必须显式传 <code>--move</code> 或 <code>-Move</code>。</li>
+                  <li>已有材料文件夹不会被覆盖。</li>
+                  <li>已有技能安装不会静默覆盖。</li>
+                  <li>私有视频和生成物被 <code>.gitignore</code> 排除。</li>
+                </ul>
+              </article>
+            </div>
+
+            <div class="checklist" id="checklist">
+              <label class="check"><input type="checkbox"> 脚本已先于 AI 分析运行。</label>
+              <label class="check"><input type="checkbox"> 确认使用了 <code>single</code> 或 <code>mix</code>。</label>
+              <label class="check"><input type="checkbox"> 材料目录包含 root 文件、outputs 和系统复查目录。</label>
+              <label class="check"><input type="checkbox"> 产品信息完整；否则产品映射标记为 pending。</label>
+              <label class="check"><input type="checkbox"> 人类选择方向前，没有创建生产脚本或 prompt 文件夹。</label>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="development" data-search="development bash powershell parity extend syntax validate test environment">
+          <div class="section-header">
+            <div>
+              <h3>开发维护</h3>
+              <p>bash 和 PowerShell 是同一工作流的两套实现。</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="grid two">
+              <article class="tile">
+                <h4>变更后要验证</h4>
+                <div class="code-block">
+                  <pre>bash -n scripts/*.sh</pre>
+                </div>
+                <div class="code-block">
+                  <pre>$files = Get-ChildItem scripts -Filter *.ps1
+foreach ($file in $files) {
+  $null = [System.Management.Automation.Language.Parser]::ParseFile(
+    $file.FullName, [ref]$null, [ref]$null
+  )
+}</pre>
+                </div>
+              </article>
+              <article class="tile">
+                <h4>扩展原则</h4>
+                <ul>
+                  <li>确定性操作继续放在脚本中。</li>
+                  <li>人类文件留在材料根目录。</li>
+                  <li>机器复查文件留在系统目录。</li>
+                  <li>保持默认复制源视频。</li>
+                  <li>新增必需产物时，同步更新 runtime 和校验器。</li>
+                  <li>影响行为时同时更新三个 Agent 包。</li>
+                </ul>
+              </article>
+            </div>
+
+            <table class="compare" style="margin-top:14px">
+              <thead>
+                <tr>
+                  <th>实现</th>
+                  <th>用途</th>
+                  <th>特点</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>bash</td>
+                  <td>macOS Codex、Cursor、WorkBuddy</td>
+                  <td>使用 Python 片段生成和解析 JSON。</td>
+                </tr>
+                <tr>
+                  <td>PowerShell</td>
+                  <td>Windows Codex</td>
+                  <td>使用 PowerShell 对象和 <code>ConvertTo-Json</code>。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll(".tab");
+    const search = document.getElementById("search");
+    const sections = Array.from(document.querySelectorAll(".section"));
+    const noResults = document.getElementById("noResults");
+    const navLinks = Array.from(document.querySelectorAll(".nav a"));
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const parent = tab.closest(".section-body");
+        const name = tab.dataset.tab;
+        parent.querySelectorAll(".tab").forEach((item) => item.classList.toggle("active", item === tab));
+        parent.querySelectorAll(".tab-panel").forEach((panel) => {
+          panel.classList.toggle("active", panel.id === `tab-${name}`);
+        });
+      });
+    });
+
+    search.addEventListener("input", () => {
+      const query = search.value.trim().toLowerCase();
+      let shown = 0;
+      sections.forEach((section) => {
+        const haystack = `${section.textContent} ${section.dataset.search || ""}`.toLowerCase();
+        const match = !query || haystack.includes(query);
+        section.classList.toggle("hidden", !match);
+        if (match) shown += 1;
+      });
+      noResults.style.display = shown ? "none" : "block";
+    });
+
+    document.getElementById("expandAll").addEventListener("click", () => {
+      document.querySelectorAll("details").forEach((item) => item.open = true);
+    });
+
+    document.getElementById("collapseAll").addEventListener("click", () => {
+      document.querySelectorAll("details").forEach((item) => item.open = false);
+    });
+
+    document.getElementById("resetChecks").addEventListener("click", () => {
+      document.querySelectorAll(".check input").forEach((box) => {
+        box.checked = false;
+        box.closest(".check").classList.remove("done");
+      });
+    });
+
+    document.querySelectorAll(".check input").forEach((box) => {
+      box.addEventListener("change", () => {
+        box.closest(".check").classList.toggle("done", box.checked);
+      });
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+      navLinks.forEach((link) => {
+        link.classList.toggle("active", link.getAttribute("href") === `#${visible.target.id}`);
+      });
+    }, { rootMargin: "-20% 0px -68% 0px", threshold: [0.1, 0.25, 0.5] });
+
+    sections.forEach((section) => observer.observe(section));
+  </script>
+</body>
+</html>
